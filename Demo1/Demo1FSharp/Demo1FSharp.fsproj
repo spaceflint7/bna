@@ -1,0 +1,30 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Library</OutputType>
+    <TargetFramework>net461</TargetFramework>
+    <LangVersion>latest</LangVersion>
+    <OutputPath>..\..\.obj\Demo1\$(Configuration)\</OutputPath>
+    <IntermediateOutputPath>$(OutputPath)\Intermediate</IntermediateOutputPath>
+    <PlatformTarget>x86</PlatformTarget>
+    <Platforms>AnyCPU;x86</Platforms>
+  </PropertyGroup>
+
+  <ItemGroup>
+
+    <Compile Include="Library1.fs" />
+
+    <Reference Include="Microsoft.Xna.Framework">
+      <HintPath>C:\Program Files (x86)\Microsoft XNA\XNA Game Studio\v4.0\References\Windows\x86\Microsoft.Xna.Framework.dll</HintPath>
+    </Reference>
+
+    <Reference Include="Microsoft.Xna.Framework.Game">
+      <HintPath>C:\Program Files (x86)\Microsoft XNA\XNA Game Studio\v4.0\References\Windows\x86\Microsoft.Xna.Framework.Game.dll</HintPath>
+    </Reference>
+
+    <Reference Include="Microsoft.Xna.Framework.Graphics">
+      <HintPath>C:\Program Files (x86)\Microsoft XNA\XNA Game Studio\v4.0\References\Windows\x86\Microsoft.Xna.Framework.Graphics.dll</HintPath>
+    </Reference>
+
+  </ItemGroup>
+</Project>

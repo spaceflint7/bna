@@ -1,0 +1,104 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+
+    <!-- REQUIRED PROPERTIES / ENVIRONMENT VARIABLES
+
+    INPUT_DLL = semi-colon separated list of DLLs to convert using Bluebonnet
+                e.g. /path/to/MyGame.exe;/path/to/MySupportLib.dll
+
+    INPUT_DLL_1 .. INPUT_DLL_9 = same as INPUT_DLL
+
+    EXTRA_JAR = semi-colon separated list of additional JARs to bundle in the APK
+                e.g. /path/to/Baselib.jar;/path/to/BNA.jar
+
+    EXTRA_JAR_1 .. EXTRA_JAR_9 = same as EXTRA_JAR
+
+    CONTENT_DIR = path to Content directory
+                e.g. $(OutputDir)/MyGame/Debug/Content
+
+    APK_OUTPUT = path to copy the final APK
+                e.g. $(OutputDir)/MyGame.apk
+
+    APK_TEMP_DIR = directory where APK processing occurs
+                e.g. $(OutputDir)/MyGame/Debug/Content
+
+    KEYSTORE_FILE = path to a keystore file used in APK signing
+
+    KEYSTORE_PWD = password for keystore file
+
+    ANDROID_MANIFEST = path to AndroidManifest.xml file
+
+    BLUEBONNET_EXE = path to Bluebonnet.exe program file
+
+    BLUEBONNET_JAR = path to Baselib.jar file from Bluebonnet
+
+    ANDROID_JAR = path to Android.jar file, for desired API level
+                e.g. $(ANDROID_HOME)/android-28/android.jar
+
+    ANDROID_BUILD = path to a build tools directory, for desired tools version
+                e.g. $(ANDROID_HOME)/build-tools/30.0.2
+
+    -->
+
+    <RunPostBuildEvent>OnOutputUpdated</RunPostBuildEvent>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <InputDll Include="$(INPUT_DLL);$(INPUT_DLL_1);$(INPUT_DLL_2);$(INPUT_DLL_3);$(INPUT_DLL_4);$(INPUT_DLL_5);$(INPUT_DLL_6);$(INPUT_DLL_7);$(INPUT_DLL_8);$(INPUT_DLL_9)" />
+    <ExtraJar Include="$(EXTRA_JAR);$(EXTRA_JAR_1);$(EXTRA_JAR_2);$(EXTRA_JAR_3);$(EXTRA_JAR_4);$(EXTRA_JAR_5);$(EXTRA_JAR_6);$(EXTRA_JAR_7);$(EXTRA_JAR_8);$(EXTRA_JAR_9)" />
+    <ContentDir Include="$(CONTENT_DIR)">
+      <DirName>%(ContentDir.Filename)%(ContentDir.Extension)</DirName>
+    </ContentDir>
+    <ContentFiles Include="$(CONTENT_DIR)/**/*" />
+  </ItemGroup>
+
+  <Target Name="CoreCompile">
+
+    <Error Condition="(! Exists($(ICON_PNG)))"
+           Text="Cannot find icon PNG file at '$(ICON_PNG)' using property ICON_PNG."/>
+    <Error Condition="(! Exists($(CONTENT_DIR)))"
+           Text="Cannot find game content folder at '$(CONTENT_DIR)' using property CONTENT_DIR."/>
+    <Error Condition="(! Exists($(ANDROID_MANIFEST)))"
+           Text="Cannot find Android manifest file at '$(ANDROID_MANIFEST)' using property ANDROID_MANIFEST."/>
+    <Error Condition="(! Exists($(KEYSTORE_FILE)))"
+           Text="Cannot find keystroke file at '$(KEYSTORE_FILE)' using property KEYSTORE_FILE."/>
+    <Error Condition="(! Exists($(BLUEBONNET_EXE)))"
+           Text="Cannot find Bluebonnet program file at '$(BLUEBONNET_EXE)' using property BLUEBONNET_EXE."/>
+    <Error Condition="(! Exists($(ANDROID_JAR)))"
+           Text="Cannot find Android platform JAR file at '$(ANDROID_JAR)' using property ANDROID_JAR."/>
+    <Error Condition="(! Exists('$(ANDROID_BUILD)/aapt.exe')) and (! Exists('$(ANDROID_BUILD)/aapt'))"
+           Text="Cannot find Android build tools at '$(ANDROID_BUILD)' using property ANDROID_BUILD."/>
+
+    <Error Condition="'$(APK_OUTPUT)' == ''"
+           Text="The APK_OUTPUT property should specify the output location."/>
+    <Error Condition="'$(APK_TEMP_DIR)' == ''"
+           Text="The APK_TEMP_DIR property should specify a temporary directory."/>
+    <Error Condition="'$(KEYSTORE_PWD)' == ''"
+           Text="The KEYSTORE_PWD property should specify a the keystore password."/>
+
+    <CreateProperty Value="%(ContentDir.DirName)">
+      <Output TaskParameter="Value" PropertyName="CONTENT_SUBDIR" />
+    </CreateProperty>
+
+    <RemoveDir Directories="$(APK_TEMP_DIR)" />
+    <MakeDir Directories="$(APK_TEMP_DIR)" />
+
+    <Exec Command="&quot;$(BLUEBONNET_EXE)&quot; &quot;%(InputDll.FullPath)&quot; &quot;$(APK_TEMP_DIR)/classes.jar&quot;" />
+    <Exec Command="&quot;$(ANDROID_BUILD)/d8&quot; --release --lib &quot;$(ANDROID_JAR)&quot; &quot;$(APK_TEMP_DIR)/classes.jar&quot; &quot;@(ExtraJar,'&quot; &quot;')&quot; --output &quot;$(APK_TEMP_DIR)&quot;"
+          Condition="'@(ExtraJar)' != ''" />
+    <Exec Command="&quot;$(ANDROID_BUILD)/d8&quot; --release --lib &quot;$(ANDROID_JAR)&quot; &quot;$(APK_TEMP_DIR)/classes.jar&quot; --output &quot;$(APK_TEMP_DIR)&quot;"
+          Condition="'@(ExtraJar)' == ''" />
+    <Copy SourceFiles="@(ContentFiles)" DestinationFolder="$(APK_TEMP_DIR)/assets/$(CONTENT_SUBDIR)" SkipUnchangedFiles="true" />
+    <Copy SourceFiles="$(ICON_PNG)" DestinationFiles="$(APK_TEMP_DIR)/res/drawable/icon.png" SkipUnchangedFiles="true" />
+    <Exec Command="&quot;$(ANDROID_BUILD)/aapt&quot; package -f -F &quot;$(APK_TEMP_DIR)/unaligned.apk&quot; -M &quot;$(ANDROID_MANIFEST)&quot; -S &quot;$(APK_TEMP_DIR)/res&quot; -I &quot;$(ANDROID_JAR)&quot;" />
+    <Exec Command="&quot;$(ANDROID_BUILD)/aapt&quot; add &quot;unaligned.apk&quot; classes.dex" WorkingDirectory="$(APK_TEMP_DIR)" />
+    <Exec Command="&quot;$(ANDROID_BUILD)/aapt&quot; add &quot;unaligned.apk&quot; assets/$(CONTENT_SUBDIR)/%(ContentFiles.RecursiveDir)%(ContentFiles.Filename)%(ContentFiles.Extension)" WorkingDirectory="$(APK_TEMP_DIR)" />
+    <Exec Command="&quot;$(ANDROID_BUILD)/zipalign&quot; -f 4 &quot;$(APK_TEMP_DIR)/unaligned.apk&quot; &quot;$(APK_TEMP_DIR)/aligned.apk&quot;" />
+    <Exec Command="&quot;$(ANDROID_BUILD)/apksigner&quot; sign --ks &quot;$(KEYSTORE_FILE)&quot; --ks-pass &quot;pass:$(KEYSTORE_PWD)&quot; &quot;$(APK_TEMP_DIR)/aligned.apk&quot;" />
+    <!-- copy the final APK -->
+    <Copy SourceFiles="$(APK_TEMP_DIR)/aligned.apk" DestinationFiles="$(APK_OUTPUT)" />
+
+  </Target>
+
+</Project>

@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<!-- specify the lowercase namespace of the project
+     as the package name in the manifest element -->
+
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="com.spaceflint.bluebonnet.xnademo1">
+
+    <!-- API 18, GLES 3.0 -->
+    <uses-sdk android:minSdkVersion="18" android:targetSdkVersion="29" />
+    <uses-feature android:glEsVersion="0x00030000" android:required="true" />
+
+    <!-- modify android:label to set the application name.
+         this name appears in the Settings / Apps listing -->
+
+    <application android:label="BNA_Demo1"
+                 android:icon="@drawable/icon"
+                 android:isGame="true" >
+
+        <!-- set android:screenOrientation if you need to lock orientation:
+          https://developer.android.com/guide/topics/manifest/activity-element#screen -->
+
+        <!-- modify android:label to set the activity name.
+             this is the name that appears below the app icon. -->
+
+        <activity android:name="microsoft.xna.framework.Activity"
+                  android:label="BNA Demo1"
+                  android:theme="@android:style/Theme.Black.NoTitleBar.Fullscreen"
+                  android:configChanges="orientation|screenSize|screenLayout|keyboardHidden"
+                  android:immersive="true"
+                  android:launchMode="singleTask"
+                  >
+
+          <!-- microsoft.xna.framework.log.tag sets the log identifier
+               for log messages printed via android.util.Log by the app.
+               if omitted, the default is 'BNA_Game' -->
+
+            <meta-data android:name="microsoft.xna.framework.log.tag"
+                       android:value="BNA_Demo1"/>
+
+          <!-- microsoft.xna.framework.main.class sets the name of the main
+               or entrypoint class.  if starts with a dot, it is appended
+               to the namespace specifies in the package attribute. -->
+
+            <meta-data android:name="microsoft.xna.framework.main.class"
+                       android:value=".Program"/>
+
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+
+        </activity>
+    </application>
+
+</manifest>

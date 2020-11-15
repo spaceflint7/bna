@@ -1,0 +1,58 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <ProjectGuid>{53E4C9F9-CE12-4067-8336-663D3582DCBA}</ProjectGuid>
+    <OutputType>Library</OutputType>
+    <RootNamespace>BNA</RootNamespace>
+    <AssemblyName>BNA</AssemblyName>
+    <RunPostBuildEvent>OnOutputUpdated</RunPostBuildEvent>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <!-- disable a warning about references having 'x86' architecture -->
+    <ResolveAssemblyWarnOrErrorOnTargetArchitectureMismatch>None</ResolveAssemblyWarnOrErrorOnTargetArchitectureMismatch>
+  </PropertyGroup>
+  <Import Project="..\Solution.project" />
+  <ItemGroup>
+    <Reference Include="$(ObjDir)Android.dll" />
+    <Reference Include="$(FNA_DLL)" />
+    <Compile Include="src\**\*.cs" />
+    <CustomAdditionalCompileInputs Include="FNA.filter" />
+    <Filter Include="FNA.filter" />
+  </ItemGroup>
+  <!-- check prerequisites -->
+  <Target Name="CheckPreReqs" BeforeTargets="ImportAndroid">
+    <Error Condition="(! Exists($(ANDROID_JAR)))"
+           Text="Cannot find Android JAR at '$(ANDROID_JAR)' using property ANDROID_JAR."/>
+    <Error Condition="(! Exists($(BLUEBONNET_EXE)))"
+           Text="Cannot find Bluebonnet EXE at '$(BLUEBONNET_EXE)' using property BLUEBONNET_EXE."/>
+    <Error Condition="(! Exists($(FNA_DLL)))"
+           Text="Cannot find FNA DLL at '$(FNA_DLL)' using environment variable FNA_DLL."/>
+  </Target>
+  <!-- import android.jar into android.dll -->
+  <Target Name="ImportAndroid" BeforeTargets="ResolveAssemblyReferences"
+          Inputs="$(ANDROID_JAR)" Outputs="$(ObjDir)android.dll">
+    <Delete Files="$(ObjDir)android.dll" />
+    <Exec Command="&quot;$(BLUEBONNET_EXE)&quot; &quot;$(ANDROID_JAR)&quot; &quot;$(ObjDir)android.dll&quot;" />
+  </Target>
+  <!-- middle of the build; compile BNA.dll here -->
+  <!-- run our converter on BNA.dll to produce BNA.jar -->
+  <Target Name="ExportToJar" AfterTargets="AfterBuild"
+          Condition=" '$(_AssemblyTimestampBeforeCompile)' != '$(_AssemblyTimestampAfterCompile)'"
+          Inputs="$(OutputPath)$(AssemblyName).dll" Outputs="$(ObjDir)$(AssemblyName).jar">
+    <Delete Files="$(ObjDir)$(AssemblyName).jar" />
+    <Exec Command="&quot;$(BLUEBONNET_EXE)&quot; &quot;$(OutputPath)$(AssemblyName).dll&quot; &quot;$(ObjDir)$(AssemblyName).jar&quot;" />
+    <!-- run our converter on types from the FNA DLL and insert into BA.jar -->
+    <ReadLinesFromFile File="@(Filter)">
+      <Output TaskParameter="Lines" ItemName="FilterItem" />
+    </ReadLinesFromFile>
+    <PropertyGroup>
+      <FilterProp>%22:@(FilterItem, '%22 %22:')%22</FilterProp>
+    </PropertyGroup>
+    <Exec Command="&quot;$(BLUEBONNET_EXE)&quot; &quot;$(FNA_DLL)&quot; &quot;$(ObjDir)$(AssemblyName).jar&quot; $(FilterProp)" />
+  </Target>
+  <Target Name="CleanGamelibInSolutionOutputDirectory" AfterTargets="Clean">
+    <Delete Files="$(ObjDir)android.dll" />
+    <Delete Files="$(ObjDir)$(AssemblyName).dll" />
+    <Delete Files="$(ObjDir)$(AssemblyName).pdb" />
+    <Delete Files="$(ObjDir)$(AssemblyName).jar" />
+  </Target>
+</Project>
