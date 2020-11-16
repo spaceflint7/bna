@@ -1,21 +1,21 @@
 
 # Bluebonnet BNA
 
-This is a port of [FNA](https://fna-xna.github.io/) for use with [Bluebonnet](https://github.com/spaceflint7/bluebonnet) to build games for Android using the [XNA 4.0](https://en.wikipedia.org/wiki/Microsoft_XNA) libraries.
+This is an implementation of a subset of the [XNA 4.0](https://en.wikipedia.org/wiki/Microsoft_XNA) libraries for use with [Bluebonnet](https://github.com/spaceflint7/bluebonnet) to build games for Android.
 
-**Bluebonnet** is an Android-compatible implementation of the .NET platform on top of the Java Virtual Machine.  **Bluebonnet BNA** makes it possible to compile XNA games written in C# or F# to Android Java without any dependencies on native code libraries.
+**Bluebonnet** is an Android-compatible, light-weight, partial implementation of the .NET platform on top of the Java Virtual Machine.  With **Bluebonnet BNA**, you can develop on Windows in C# or F# with the XNA libraries, and export to Android Java without any dependencies on native code libraries.  But please note that **Bluebonnet BNA** does not aim for 100% compatibility with either .NET or XNA.
 
 ## Building
 
 - Download and build the `Bluebonnet` compiler and its runtime library, `Baselib.jar`.  For instructions, see [Bluebonnet README](https://github.com/spaceflint7/bluebonnet/blob/master/README.md).
 
-- Download the [FNA](https://github.com/FNA-XNA/FNA/archive/master.zip) source code.  Build by typing the following command in the FNA root directory:
+- Download the [FNA](https://github.com/FNA-XNA/FNA/archive/master.zip) source code.  Build by typing the following command in the repository directory:
 
     - `MSBuild FNA.csproj -p:Configuration=Release`
 
-    - If the build is successful, the file `FNA.DLL` will be generated in the `bin/Release` sub-directory of the FNA root directory.
+    - If the build is successful, the file `FNA.DLL` will be generated in the `bin/Release` sub-directory of the repository directory.
 
-- Download this `BNA` project and build it by typing the following command in the BNA root directory:
+- Download this [BNA](https://github.com/spaceflint7/bna/archive/master.zip) project and build it by typing the following command in the repository directory:
 
     - `MSBuild BNA -p:Configuration=Release -p:ANDROID_JAR=/path/to/Android.jar -p:BLUEBONNET_EXE=/path/to/Bluebonnet/executable -p:FNA_DLL=/path/to/FNA.DLL`
 
