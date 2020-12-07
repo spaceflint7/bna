@@ -226,3 +226,24 @@ namespace Microsoft.Xna.Framework.Input.Touch
     }
 
 }
+
+
+
+namespace Microsoft.Xna.Framework.Media
+{
+
+    //
+    // MediaQueue
+    //
+
+    [java.attr.Discard] // discard in output
+    public class MediaQueue
+    {
+        public MediaQueue() { }
+        public Song ActiveSong { get; }
+        public int ActiveSongIndex { get; set; }
+        public void Add(Song song) { }
+        public void Clear() { }
+    }
+
+}

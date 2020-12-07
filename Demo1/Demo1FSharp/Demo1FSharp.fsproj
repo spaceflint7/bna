@@ -1,5 +1,11 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
+  <!--
+    to resolve error in Microsoft.PackageDependencyResolution.targets about
+        Assets file 'project.assets.json' doesn't have a target for 'net461'
+    make sure you use the latest nuget.exe, or at least version 5.8.0
+  -->
+
   <PropertyGroup>
     <OutputType>Library</OutputType>
     <TargetFramework>net461</TargetFramework>
@@ -13,6 +19,9 @@
   <ItemGroup>
 
     <Compile Include="Library1.fs" />
+
+    <PackageReference Include="FSharp.Core" Version="4.7.0" />
+    <PackageReference Update="FSharp.Core" Version="4.7.0" />
 
     <Reference Include="Microsoft.Xna.Framework">
       <HintPath>C:\Program Files (x86)\Microsoft XNA\XNA Game Studio\v4.0\References\Windows\x86\Microsoft.Xna.Framework.dll</HintPath>

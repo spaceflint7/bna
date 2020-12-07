@@ -42,7 +42,7 @@ namespace Demo1
             {
                 if (renderToTexture)
                 {
-                    ((Game1)Game).DrawFlushBatch();
+                    ((Game1) Game).DrawFlushBatch();
                     renderTargetWidth = Config.ClientWidth;
                     renderTargetHeight = Config.ClientHeight;
                     if (renderTarget != null)

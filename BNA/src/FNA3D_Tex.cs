@@ -257,7 +257,7 @@ namespace Microsoft.Xna.Framework.Graphics
                     {
                         string reason = (bitmap == null) ? "unspecified error"
                                       : $"unsupported config '{bitmap.getConfig()}'";
-                        throw new System.BadImageFormatException(
+                        throw new BadImageFormatException(
                             $"Load failed for bitmap image '{titleStream.Name}': {reason}");
                     }
 
@@ -341,15 +341,22 @@ namespace Microsoft.Xna.Framework.Graphics
                                                ref FNA3D_SamplerState sampler)
         {
             var samplerCopy = sampler;
+            int textureId = (int) texture;
             var renderer = Renderer.Get(device);
 
             renderer.Send( () =>
             {
                 var state = (State) renderer.UserData;
-                var config = state.TextureConfigs[(int) texture];
+                var config = state.TextureConfigs[textureId];
 
                 GLES20.glActiveTexture(GLES20.GL_TEXTURE0 + index);
-                GLES20.glBindTexture(config[0], (int) texture);
+                GLES20.glBindTexture(config[0], textureId);
+
+                if (index == renderer.TextureUnits - 1)
+                    state.TextureOnLastUnit = textureId;
+
+                if (textureId == 0)
+                    return;
 
                 GLES20.glTexParameteri(config[0], GLES30.GL_TEXTURE_MAX_LEVEL,
                                        config[2] - 1);
@@ -571,6 +578,8 @@ namespace Microsoft.Xna.Framework.Graphics
             // #1 - SurfaceFormat
             // #2 - levels count
             public Dictionary<int, int[]> TextureConfigs = new Dictionary<int, int[]>();
+
+            public int TextureOnLastUnit;
         }
 
     }

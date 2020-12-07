@@ -14,6 +14,7 @@
   <ItemGroup>
     <Reference Include="$(ObjDir)Android.dll" />
     <Reference Include="$(FNA_DLL)" />
+    <Reference Include="System.dll" />
     <Compile Include="src\**\*.cs" />
     <CustomAdditionalCompileInputs Include="FNA.filter" />
     <Filter Include="FNA.filter" />

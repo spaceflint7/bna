@@ -30,6 +30,7 @@ echo Building BNA.  Command:
 echo MSBuild BNA -p:Configuration=Release
 echo ========================================
 MSBuild BNA -p:Configuration=Release
+if errorlevel 1 goto :EOF
 pause
 
 echo ========================================
@@ -38,14 +39,17 @@ echo nuget restore Demo1
 echo msbuild Demo1 -p:Configuration=Release -p:Platform="x86"
 echo ========================================
 nuget restore Demo1
+if errorlevel 1 goto :EOF
 msbuild Demo1 -p:Configuration=Release -p:Platform="x86"
+if errorlevel 1 goto :EOF
 pause
 
 echo ========================================
 echo Converting Demo1 to APK.  Command:
 echo MSBuild MakeAPK.project -p:INPUT_DLL=.obj\Demo1\Release\Demo1.exe -p:INPUT_DLL_2=.obj\Demo1\Release\Demo1FSharp.dll -p:INPUT_DLL_3=.obj\Demo1\Release\FSharp.Core.dll -p:CONTENT_DIR=.obj\Demo1\Release\Content -p:ICON_PNG=Demo1\Demo1\GameThumbnail.png -p:ANDROID_MANIFEST=Demo1\AndroidManifest.xml -p:KEYSTORE_FILE=.\my.keystore -p:KEYSTORE_PWD=123456 -p:APK_OUTPUT=.obj\Demo1.apk -p:APK_TEMP_DIR=.obj\Demo1\Release\TempApk -p:EXTRA_JAR_1=.obj\BNA.jar -p:EXTRA_JAR_2=%BLUEBONNET_LIB%
 echo ========================================
-MSBuild MakeAPK.project -p:INPUT_DLL=.obj\Demo1\Release\Demo1.exe -p:INPUT_DLL_2=.obj\Demo1\Release\Demo1FSharp.dll -p:INPUT_DLL_3=.obj\Demo1\Release\FSharp.Core.dll -p:CONTENT_DIR=.obj\Demo1\Release\Content -p:ICON_PNG=Demo1\Demo1\GameThumbnail.png -p:ANDROID_MANIFEST=Demo1\AndroidManifest.xml -p:KEYSTORE_FILE=.\my.keystore -p:KEYSTORE_PWD=123456 -p:APK_OUTPUT=.obj\Demo1.apk -p:APK_TEMP_DIR=.obj\Demo1\Release\TempApk -p:EXTRA_JAR_1=.obj\BNA.jar -p:EXTRA_JAR_2=%BLUEBONNET_LIB%
+     MSBuild MakeAPK.project -p:INPUT_DLL=.obj\Demo1\Release\Demo1.exe -p:INPUT_DLL_2=.obj\Demo1\Release\Demo1FSharp.dll -p:INPUT_DLL_3=.obj\Demo1\Release\FSharp.Core.dll -p:CONTENT_DIR=.obj\Demo1\Release\Content -p:ICON_PNG=Demo1\Demo1\GameThumbnail.png -p:ANDROID_MANIFEST=Demo1\AndroidManifest.xml -p:KEYSTORE_FILE=.\my.keystore -p:KEYSTORE_PWD=123456 -p:APK_OUTPUT=.obj\Demo1.apk -p:APK_TEMP_DIR=.obj\Demo1\Release\TempApk -p:EXTRA_JAR_1=.obj\BNA.jar -p:EXTRA_JAR_2=%BLUEBONNET_LIB%
+if errorlevel 1 goto :EOF
 
 echo ========================================
 echo All done

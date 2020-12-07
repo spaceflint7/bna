@@ -102,3 +102,11 @@
 
 *.Content.*
 *.Storage.*
+
+*.Audio.AudioChannels
+*.Audio.SoundState
+*.Audio.*Exception
+
+*.Media.MediaQueue
+*.Media.MediaState
+*.Media.SongCollection

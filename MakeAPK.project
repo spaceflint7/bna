@@ -17,6 +17,8 @@
     CONTENT_DIR = path to Content directory
                 e.g. $(OutputDir)/MyGame/Debug/Content
 
+    ICON_PNG = path to a PNG file to use as the app icon
+
     APK_OUTPUT = path to copy the final APK
                 e.g. $(OutputDir)/MyGame.apk
 

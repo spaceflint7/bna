@@ -48,6 +48,10 @@ namespace Demo1
                 file = container.OpenFile("state-v1.bin", FileMode.OpenOrCreate);
                 if (file.Length > 4)
                     Read(file);
+
+                // reset file in case we crash
+                file.SetLength(0);
+                file.Flush();
             }
             catch (Exception e)
             {

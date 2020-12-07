@@ -3,6 +3,7 @@ using System;
 using System.IO;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
+using Microsoft.Xna.Framework.Audio;
 
 namespace Demo1
 {
@@ -14,6 +15,8 @@ namespace Demo1
         public Texture2D white;
         private SpriteBatch spriteBatch;
         private Font myFont;
+        private SoundEffectInstance effect;
+        private bool playEffect;
         private int pageNumber, pageNumberOld;
         private bool paused;
         private bool anyDrawText;
@@ -58,8 +61,33 @@ namespace Demo1
             // Texture2D.FromStream(GraphicsDevice, stream);
             //
             // to disable processing, open Properties on the image in the
-            // Content project, set "Build Action: None", and
-            // "Copy to Output Directory: Copy if newer".
+            // Content project, and change the following in the Advanced tab:
+            // "Build Action: None" and "Copy to Output Directory: Copy if newer".
+
+            effect = Content.Load<SoundEffect>("effect").CreateInstance();
+            effect.Pitch = 0.2f;
+
+            // the XNA content processor for Song converts music files to WMA
+            // format, which Android does not support playing.  use MP3 instead.
+            //
+            // to disable processing, open Properties on the image in the
+            // Content project, and change the following in the Advanced tab:
+            // "Build Action: None" and "Copy to Output Directory: Copy if newer".
+            //
+            // note that XNA on Windows may not play MP3 files which contain ID3 
+            // tags.  use one of the many free utilities to remove such tags.
+            //
+            // unsupported BNA MediaPlayer:  queueing more than one song at a time;
+            // the ActiveSongChanged event; visualization data.
+
+            Microsoft.Xna.Framework.Media.MediaPlayer.Volume = 0.05f;
+            Microsoft.Xna.Framework.Media.MediaPlayer.Play(
+                Microsoft.Xna.Framework.Media.Song.FromUri("Song1",
+                new System.Uri(Content.RootDirectory + "/music.mp3", UriKind.Relative)));
+            Microsoft.Xna.Framework.Media.MediaPlayer.IsRepeating = true;
+            // song duration is populated during the call to Play()
+            // Console.WriteLine(Microsoft.Xna.Framework.Media.MediaPlayer.Queue.ActiveSong.Duration);
+
         }
 
 
@@ -80,12 +108,26 @@ namespace Demo1
             if (paused)
                 return;
 
+            if (playEffect)
+            {
+                effect.Play();
+                playEffect = false;
+            }
+
             // basic scene management for the purpose of this demo:
             // after either arrow at the top of the screen is clicked, and
             // the current page number has changed, create the new 'page'.
 
-            if (pageNumber != pageNumberOld)
+                if (pageNumber != pageNumberOld)
             {
+                if (pageComponent != null)
+                {
+                    if (effect.State == SoundState.Playing)
+                        effect.Stop();
+                    effect.Pan = (pageNumber > pageNumberOld) ? 1f : -1f;
+                    playEffect = true;
+                }
+
                 const int LAST_PAGE = 4;
                 if (pageNumber <= 0)
                     pageNumber = LAST_PAGE;

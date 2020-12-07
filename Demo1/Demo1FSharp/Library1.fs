@@ -7,8 +7,10 @@ open Microsoft.Xna.Framework.Graphics
 type StencilDemo (game : Game) =
     inherit DrawableGameComponent(game)
 
-    let mutable spriteBatch = null
-    let mutable texture = null
+    let mutable spriteBatch = new SpriteBatch (game.GraphicsDevice)
+    let mutable logoTexture = game.Content.Load("fsharp256")
+    let mutable backTexture = new Texture2D(game.GraphicsDevice, 16, 16)
+    let mutable counter = 0
 
     // using option here solely to force a dependency on FSharp.Core.dll
     let mutable rectFunc : (Game -> Rectangle) option = None
@@ -26,12 +28,36 @@ type StencilDemo (game : Game) =
               (float32) (Math.Cos(gameTime.TotalGameTime.TotalMilliseconds * 0.001)))
 
     override Game.Initialize() =
-        spriteBatch <- new SpriteBatch (game.GraphicsDevice)
-        texture <- game.Content.Load("fsharp256")
         rectFunc <- Some logoRect
         colorFunc <- Some logoColor
 
     override Game.Draw gameTime =
+        
+        let backArray = Array.zeroCreate (16 * 16)
+        backTexture.GetData backArray
+
+        if counter = 0
+        then 
+            backArray.[12 * 16] <- 0xFF0000FF
+            counter <- 1
+        else
+            for y = 4 to 11 do
+                for x = 0 to 15 do
+                    let idx = y * 16 + x
+                    backArray.[idx] <- backArray.[idx + 1]
+                    backArray.[idx + 1] <- 0
+            counter <- match counter with
+                            | 60 -> 0
+                            | n -> n + 1
+        backTexture.SetData backArray
+
+        spriteBatch.Begin (SpriteSortMode.Deferred, BlendState.AlphaBlend, SamplerState.PointClamp, DepthStencilState.None, new RasterizerState())
+        spriteBatch.Draw (backTexture, 
+                          Rectangle(0, 0, game.Window.ClientBounds.Width, game.Window.ClientBounds.Height), 
+                          Nullable (Rectangle(0, 0, 16, 16)), 
+                          Color.White)
+        spriteBatch.End ()
+
         spriteBatch.Begin ()
-        spriteBatch.Draw (texture, rectFunc.Value game, colorFunc.Value gameTime)
+        spriteBatch.Draw (logoTexture, rectFunc.Value game, colorFunc.Value gameTime)
         spriteBatch.End ()

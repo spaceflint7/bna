@@ -22,7 +22,6 @@ namespace Microsoft.Xna.Framework.Graphics
         }
 
 
-
         //
         // CreateProgram
         //

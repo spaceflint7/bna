@@ -37,7 +37,8 @@ namespace Microsoft.Xna.Framework.Graphics
                     if ((state.TargetFramebuffer = id[0]) == 0)
                         return;
                 }
-                GLES20.glBindFramebuffer(GLES20.GL_FRAMEBUFFER, state.TargetFramebuffer);
+                GLES20.glBindFramebuffer(GLES30.GL_DRAW_FRAMEBUFFER,
+                                         state.TargetFramebuffer);
 
                 int attachmentIndex = GLES20.GL_COLOR_ATTACHMENT0;
                 foreach (var renderTarget in renderTargetsCopy)
@@ -48,7 +49,7 @@ namespace Microsoft.Xna.Framework.Graphics
                         // from FNA3D_GetMaxMultiSampleCount, which we never do
                         throw new PlatformNotSupportedException();
                         /*GLES20.glFramebufferRenderbuffer(
-                            GLES20.GL_FRAMEBUFFER, attachmentIndex,
+                            GLES20.GL_DRAW_FRAMEBUFFER, attachmentIndex,
                             GLES20.GL_RENDERBUFFER, (int) renderTarget.colorBuffer);*/
                     }
                     else
@@ -60,7 +61,7 @@ namespace Microsoft.Xna.Framework.Graphics
                                            + renderTarget.data2;
                         }
                         GLES20.glFramebufferTexture2D(
-                            GLES20.GL_FRAMEBUFFER, attachmentIndex,
+                            GLES30.GL_DRAW_FRAMEBUFFER, attachmentIndex,
                             attachmentType, (int) renderTarget.texture, 0);
                     }
                     attachmentIndex++;
@@ -71,12 +72,12 @@ namespace Microsoft.Xna.Framework.Graphics
                 while (attachmentIndex < lastAttachmentPlusOne)
                 {
                     GLES20.glFramebufferRenderbuffer(
-                        GLES20.GL_FRAMEBUFFER, attachmentIndex++,
+                        GLES30.GL_DRAW_FRAMEBUFFER, attachmentIndex++,
                         GLES20.GL_RENDERBUFFER, 0);
                 }
 
                 GLES20.glFramebufferRenderbuffer(
-                    GLES20.GL_FRAMEBUFFER, GLES30.GL_DEPTH_STENCIL_ATTACHMENT,
+                    GLES30.GL_DRAW_FRAMEBUFFER, GLES30.GL_DEPTH_STENCIL_ATTACHMENT,
                     GLES20.GL_RENDERBUFFER, (int) depthStencilBuffer);
 
                 state.RenderToTexture = true;
@@ -100,7 +101,7 @@ namespace Microsoft.Xna.Framework.Graphics
             var renderer = Renderer.Get(device);
             renderer.Send( () =>
             {
-                GLES20.glBindFramebuffer(GLES20.GL_FRAMEBUFFER, 0);
+                GLES20.glBindFramebuffer(GLES30.GL_DRAW_FRAMEBUFFER, 0);
 
                 var state = (State) renderer.UserData;
                 state.RenderToTexture = false;
@@ -138,7 +139,10 @@ namespace Microsoft.Xna.Framework.Graphics
 
                     GLES20.glBindTexture(attachmentType, texture);
                     GLES20.glGenerateMipmap(attachmentType);
-                    GLES20.glBindTexture(attachmentType, 0);
+
+                    var state = (State) renderer.UserData;
+                    if (state.TextureOnLastUnit != 0)
+                        GLES20.glBindTexture(attachmentType, state.TextureOnLastUnit);
                 });
             }
         }
@@ -205,6 +209,75 @@ namespace Microsoft.Xna.Framework.Graphics
         }
 
         //
+        // Get Texture Data
+        //
+
+        private static void GetTextureData(Renderer renderer, int textureId,
+                                           int x, int y, int w, int h, int level,
+                                           object dataObject, int dataOffset, int dataLength)
+        {
+            java.nio.Buffer buffer = dataObject switch
+            {
+                sbyte[] byteArray =>
+                    java.nio.ByteBuffer.wrap(byteArray, dataOffset, dataLength),
+
+                int[] intArray =>
+                    java.nio.IntBuffer.wrap(intArray, dataOffset / 4, dataLength / 4),
+
+                _ => throw new ArgumentException(dataObject?.GetType().ToString()),
+            };
+
+            renderer.Send( () =>
+            {
+                var state = (State) renderer.UserData;
+                if (state.SourceFramebuffer == 0)
+                {
+                    var id = new int[1];
+                    GLES20.glGenFramebuffers(1, id, 0);
+                    if ((state.SourceFramebuffer = id[0]) == 0)
+                        return;
+                }
+
+                var config = state.TextureConfigs[textureId];
+                if (config[1] != (int) SurfaceFormat.Color)
+                {
+                    throw new NotSupportedException(
+                                ((SurfaceFormat) config[1]).ToString());
+                }
+
+                GLES20.glBindFramebuffer(GLES30.GL_READ_FRAMEBUFFER,
+                                         state.SourceFramebuffer);
+
+                GLES20.glFramebufferTexture2D(
+                    GLES30.GL_READ_FRAMEBUFFER, GLES20.GL_COLOR_ATTACHMENT0,
+                    GLES20.GL_TEXTURE_2D, textureId, level);
+
+                GLES20.glReadPixels(x, y, w, h,
+                                    GLES20.GL_RGBA, GLES20.GL_UNSIGNED_BYTE, buffer);
+
+                GLES20.glBindFramebuffer(GLES30.GL_READ_FRAMEBUFFER, 0);
+            });
+        }
+
+        //
+        // FNA3D_GetTextureData2D
+        //
+
+        public static void FNA3D_GetTextureData2D(IntPtr device, IntPtr texture,
+                                                  int x, int y, int w, int h, int level,
+                                                  IntPtr data, int dataLength)
+        {
+            // FNA Texture2D uses GCHandle::Alloc and GCHandle::AddrOfPinnedObject.
+            // we use GCHandle::FromIntPtr to convert that address to an object reference.
+            // see also:  system.runtime.interopservices.GCHandle struct in baselib.
+            int dataOffset = (int) data;
+            var dataObject = System.Runtime.InteropServices.GCHandle.FromIntPtr(data).Target;
+
+            GetTextureData(Renderer.Get(device), (int) texture,
+                           x, y, w, h, level, dataObject, dataOffset, dataLength);
+        }
+
+        //
         // DepthFormatToDepthStorage
         //
 
@@ -238,6 +311,7 @@ namespace Microsoft.Xna.Framework.Graphics
         private partial class State
         {
             public bool RenderToTexture;
+            public int SourceFramebuffer;
             public int TargetFramebuffer;
             public int ActiveAttachments;
         }

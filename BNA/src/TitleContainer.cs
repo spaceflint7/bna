@@ -59,4 +59,10 @@ namespace Microsoft.Xna.Framework
 
     }
 
+    /*internal static class TitleLocation
+    {
+        // there is no file path for asset files which are part of the APK
+        public static string Path => throw new System.PlatformNotSupportedException();
+    }*/
+
 }
