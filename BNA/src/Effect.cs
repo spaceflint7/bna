@@ -67,7 +67,7 @@ namespace Microsoft.Xna.Framework.Graphics
         public string CreateProgram2(string vertexText, string fragmentText)
         {
             string errText = null;
-            Renderer.Get(GraphicsDevice.GLDevice).Send( () =>
+            Renderer.Get(GraphicsDevice.GLDevice).Send(true, () =>
             {
                 (vertexId, errText) = CompileShader(
                             GLES20.GL_VERTEX_SHADER, "vertex", vertexText);
@@ -93,7 +93,6 @@ namespace Microsoft.Xna.Framework.Graphics
 
             (int, string) CompileShader(int kind, string errKind, string text)
             {
-                //GameRunner.Log($"SHADER PROGRAM: [[[" + text + "]]]");
                 string errText = null;
                 int shaderId = GLES20.glCreateShader(kind);
                 int errCode = GLES20.glGetError();
@@ -237,7 +236,7 @@ namespace Microsoft.Xna.Framework.Graphics
         public (string name, int type, int size)[] GetProgramUniforms()
         {
             (string, int, int)[] result = null;
-            Renderer.Get(GraphicsDevice.GLDevice).Send( () =>
+            Renderer.Get(GraphicsDevice.GLDevice).Send(true, () =>
             {
                 var count = new int[1];
                 GLES20.glGetProgramiv(programId, GLES20.GL_ACTIVE_UNIFORM_MAX_LENGTH, count, 0);
@@ -272,7 +271,7 @@ namespace Microsoft.Xna.Framework.Graphics
         public void INTERNAL_applyEffect(uint pass)
         {
             var graphicsDevice = GraphicsDevice;
-            Renderer.Get(graphicsDevice.GLDevice).Send( () =>
+            Renderer.Get(graphicsDevice.GLDevice).Send(false, () =>
             {
                 GLES20.glUseProgram(programId);
                 int n = Parameters.Count;
@@ -297,7 +296,7 @@ namespace Microsoft.Xna.Framework.Graphics
         {
             if (! base.IsDisposed)
             {
-                Renderer.Get(GraphicsDevice.GLDevice).Send( () =>
+                Renderer.Get(GraphicsDevice.GLDevice).Send(true, () =>
                 {
                     GLES20.glDeleteShader(fragmentId);
                     GLES20.glDeleteShader(vertexId);

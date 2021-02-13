@@ -45,6 +45,10 @@
 *.Input.Touch.TouchLocationState
 *.Input.Touch.TouchPanel
 *.Input.Touch.TouchPanelCapabilities
+*.Input.Keyboard
+*.Input.KeyboardState
+*.Input.Keys
+*.Input.KeyState
 
 *.Graphics.BasicEffect
 *.Graphics.Blend

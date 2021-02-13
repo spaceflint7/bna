@@ -30,7 +30,7 @@ namespace Microsoft.Xna.Framework.Graphics
         private static int CreateBuffer(Renderer renderer, int target, byte dynamic, int size)
         {
             int bufferId = 0;
-            renderer.Send( () =>
+            renderer.Send(true, () =>
             {
                 int[] id = new int[1];
                 GLES20.glGenBuffers(1, id, 0);
@@ -74,7 +74,7 @@ namespace Microsoft.Xna.Framework.Graphics
         public static void FNA3D_AddDisposeVertexBuffer(IntPtr device, IntPtr buffer)
         {
             var renderer = Renderer.Get(device);
-            renderer.Send( () =>
+            renderer.Send(true, () =>
             {
                 GLES20.glDeleteBuffers(1, new int[] { (int) buffer }, 0);
 
@@ -102,7 +102,7 @@ namespace Microsoft.Xna.Framework.Graphics
             var dataBuffer = BufferSerializer.Convert(
                                     dataPointer, dataLength, state, bufferId);
 
-            renderer.Send( () =>
+            renderer.Send(false, () =>
             {
                 GLES20.glBindBuffer(target, bufferId);
 
@@ -151,11 +151,18 @@ namespace Microsoft.Xna.Framework.Graphics
                                                                   int numBindings, byte bindingsUpdated,
                                                                   int baseVertex)
         {
+            /* skip if FNA says the bindings have not been updated
+            if (baseVertex == ((State) renderer.UserData).BaseVertex.getAndSet(baseVertex))
+            {
+                if (bindingsUpdated == 0)
+                    return;
+            }*/
+
             var bindingsCopy = new FNA3D_VertexBufferBinding[numBindings];
             for (int i = 0; i < numBindings; i++)
                 bindingsCopy[i] = bindings[i];
 
-            Renderer.Get(device).Send( () =>
+            Renderer.Get(device).Send(false, () =>
             {
                 int nextAttribIndex = 0;
                 foreach (var binding in bindingsCopy)
@@ -278,8 +285,8 @@ namespace Microsoft.Xna.Framework.Graphics
                 // we use GCHandle::FromIntPtr to convert that address to an object reference.
                 // see also:  system.runtime.interopservices.GCHandle struct in baselib.
                 int offset = (int) data;
-                newBuffer = Convert(GCHandle.FromIntPtr(data - offset).Target,
-                                    offset, length, oldBuffer);
+                newBuffer = Convert2(GCHandle.FromIntPtr(data - offset).Target,
+                                     offset, length, oldBuffer);
 
                 if (newBuffer != oldBuffer)
                 {
@@ -293,8 +300,8 @@ namespace Microsoft.Xna.Framework.Graphics
             }
 
 
-            public static java.nio.Buffer Convert(object data, int offset, int length,
-                                                  java.nio.Buffer buffer)
+            private static java.nio.Buffer Convert2(object data, int offset, int length,
+                                                    java.nio.Buffer buffer)
             {
                 if (data is short[])
                 {
@@ -491,6 +498,7 @@ namespace Microsoft.Xna.Framework.Graphics
         {
             public Dictionary<int, int[]> BufferSizeUsage = new Dictionary<int, int[]>();
             public Dictionary<int, java.nio.Buffer> BufferCache = new Dictionary<int, java.nio.Buffer>();
+            //public java.util.concurrent.atomic.AtomicInteger BaseVertex = new java.util.concurrent.atomic.AtomicInteger();
         }
 
     }

@@ -11,11 +11,45 @@ namespace Microsoft.Xna.Framework
 
         protected override void onCreate(android.os.Bundle savedInstanceState)
         {
+            // on some devices, this should be before call to base.onCreate
+            // requestWindowFeature(android.view.Window.FEATURE_NO_TITLE);
+
+            logTag = GetMetaAttr_Str("log.tag", "BNA_Game");
+
+            backKeyCode = GetMetaAttr_Int("back.key");
+
+            if (android.os.Build.VERSION.SDK_INT >= 19)
+            {
+                immersiveMode = GetMetaAttr_Int("immersive.mode") != 0;
+
+                if (immersiveMode && android.os.Build.VERSION.SDK_INT >= 28)
+                {
+                    var layoutParams = getWindow().getAttributes();
+                    layoutParams.layoutInDisplayCutoutMode =
+                        android.view.WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES;
+                    getWindow().setAttributes(layoutParams);
+                }
+            }
+
+            if (GetMetaAttr_Int("keep.screen.on") != 0)
+            {
+                getWindow().addFlags(
+                    android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+            }
+
+            /*
+            int flags = android.view.WindowManager.LayoutParams.FLAG_FULLSCREEN
+                      | android.view.WindowManager.LayoutParams.FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS
+                      | android.view.WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN
+                      | android.view.WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS;
+            if (GetMetaAttr_Int("keep.screen.on") != 0)
+                flags |= android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON;
+            getWindow().setFlags(flags
+                    | android.view.WindowManager.LayoutParams.FLAG_FORCE_NOT_FULLSCREEN,
+                                flags);
+            */
+
             base.onCreate(savedInstanceState);
-
-            _LogTag = GetMetaAttr("log.tag") ?? _LogTag;
-
-            new java.lang.Thread(gameRunner = new GameRunner(this)).start();
         }
 
         //
@@ -36,7 +70,7 @@ namespace Microsoft.Xna.Framework
 
         //
         // Android events forwarded to GameRunner:
-        // onPause, onResume, onDestroy, onTouchEvent
+        // onPause, onWindowFocusChanged, onDestroy, onTouchEvent, onBackPressed
         //
 
         protected override void onPause()
@@ -45,11 +79,39 @@ namespace Microsoft.Xna.Framework
             base.onPause();
         }
 
-        protected override void onResume()
+        public override void onWindowFocusChanged(bool hasFocus)
+        {
+            base.onWindowFocusChanged(hasFocus);
+
+            if (hasFocus)
+            {
+                if (immersiveMode)
+                {
+                    getWindow().getDecorView().setSystemUiVisibility(
+                              android.view.View.SYSTEM_UI_FLAG_LAYOUT_STABLE
+                            | android.view.View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
+                            | android.view.View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
+                            | android.view.View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
+                            | android.view.View.SYSTEM_UI_FLAG_FULLSCREEN
+                            | android.view.View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY);
+                }
+
+                if (object.ReferenceEquals(gameRunner, null))
+                {
+                    new java.lang.Thread(gameRunner = new GameRunner(this)).start();
+                }
+                else
+                {
+                    gameRunner.ActivityResume();
+                }
+            }
+        }
+
+        /*protected override void onResume()
         {
             gameRunner?.ActivityResume();
             base.onResume();
-        }
+        }*/
 
         protected override void onDestroy()
         {
@@ -79,33 +141,47 @@ namespace Microsoft.Xna.Framework
             return true;
         }
 
+        public override void onBackPressed()
+        {
+            if (backKeyCode != 0)
+                gameRunner?.ActivityKey(backKeyCode);
+            else
+                base.onBackPressed();
+        }
+
         //
-        // GetMetaAttr
+        // GetMetaAttr_Str, GetMetaAttr_Int
         //
 
-        public string GetMetaAttr(string name, bool warn = false)
+        public string GetMetaAttr_Str(string name, string def)
         {
-            var info = getPackageManager().getActivityInfo(getComponentName(),
-                                    android.content.pm.PackageManager.GET_ACTIVITIES
-                                  | android.content.pm.PackageManager.GET_META_DATA);
-            name = "microsoft.xna.framework." + name;
-            var str = info?.metaData?.getString(name);
+            name = "BNA." + name;
+            var str = GetMetaData()?.getString(name);
             if (string.IsNullOrEmpty(str))
             {
-                if (warn)
-                    Activity.Log($"missing metadata attribute '{name}'");
-                str = null;
+                Activity.Log($"missing metadata attribute '{name}'");
+                str = def;
             }
             return str;
         }
+
+        public int GetMetaAttr_Int(string name)
+            => GetMetaData()?.getInt("BNA." + name) ?? 0;
+
+        private android.os.Bundle GetMetaData()
+            => getPackageManager().getActivityInfo(
+                            getComponentName(),
+                            android.content.pm.PackageManager.GET_ACTIVITIES
+                          | android.content.pm.PackageManager.GET_META_DATA)
+                    ?.metaData;
 
         //
         // Log
         //
 
-        public static void Log(string s) => android.util.Log.i(_LogTag, s);
+        public static void Log(string s) => android.util.Log.i(logTag, s);
 
-        private static string _LogTag = "BNA_Game";
+        private static string logTag;
 
         //
         // data
@@ -113,6 +189,8 @@ namespace Microsoft.Xna.Framework
 
         private GameRunner gameRunner;
         private bool restartActivity;
+        private bool immersiveMode;
+        private int backKeyCode;
 
     }
 

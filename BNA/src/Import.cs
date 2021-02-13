@@ -201,6 +201,12 @@ namespace Microsoft.Xna.Framework.Input
         public int Y { get; set; }
         public ButtonState LeftButton { get; set; }
     }
+
+    [java.attr.Discard] // discard in output
+    public static class Keyboard
+    {
+        public static List<Keys> keys;
+    }
 }
 
 

@@ -15,6 +15,7 @@ namespace Microsoft.Xna.Framework.Media
         [java.attr.RetainType] private static float volume;
         [java.attr.RetainType] private static bool muted;
         [java.attr.RetainType] private static bool looping;
+        [java.attr.RetainType] private static bool wasPlayingBeforeActivityPause;
 
         //
         // static constructor
@@ -283,6 +284,28 @@ namespace Microsoft.Xna.Framework.Media
             }
 
         }
+
+        //
+        // ActivityPauseOrResume
+        //
+
+        public static void ActivityPauseOrResume(bool pausing)
+        {
+            if (pausing)
+            {
+                if (State == MediaState.Playing)
+                {
+                    wasPlayingBeforeActivityPause = true;
+                    Pause();
+                }
+            }
+            else if (wasPlayingBeforeActivityPause)
+            {
+                wasPlayingBeforeActivityPause = false;
+                Resume();
+            }
+        }
+
     }
 
     //

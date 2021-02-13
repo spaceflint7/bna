@@ -20,6 +20,8 @@ namespace Microsoft.Xna.Framework.Graphics
         private android.os.ConditionVariable waitObject;
         private java.util.concurrent.atomic.AtomicInteger paused;
         private Action actionOnChanged;
+        private int swapInterval;
+        private bool checkErrors;
 
         public object UserData;
 
@@ -39,11 +41,14 @@ namespace Microsoft.Xna.Framework.Graphics
 
         private Renderer(android.app.Activity activity, Action onChanged,
                          int redSize, int greenSize, int blueSize,
-                         int alphaSize, int depthSize, int stencilSize)
+                         int alphaSize, int depthSize, int stencilSize,
+                         int swapInterval, bool checkErrors)
         {
             waitObject = new android.os.ConditionVariable();
             paused = new java.util.concurrent.atomic.AtomicInteger();
             actionOnChanged = onChanged;
+            this.swapInterval = swapInterval;
+            this.checkErrors = checkErrors;
 
             activity.runOnUiThread(((java.lang.Runnable.Delegate) (() =>
             {
@@ -55,7 +60,6 @@ namespace Microsoft.Xna.Framework.Graphics
                 surface.setRenderer(this);
                 surface.setRenderMode(android.opengl.GLSurfaceView.RENDERMODE_WHEN_DIRTY);
                 activity.setContentView(surface);
-
             })).AsInterface());
 
             // wait for one onDrawFrame callback, which tells us that
@@ -78,16 +82,21 @@ namespace Microsoft.Xna.Framework.Graphics
         // Send
         //
 
-        public void Send(Action action)
+        public void Send(bool wait, Action action)
         {
             Exception exc = null;
             if (paused.get() == 0)
             {
-                var cond = new android.os.ConditionVariable();
-                surface.queueEvent(((java.lang.Runnable.Delegate) (() =>
+                if (! waitObject.block(2000))
                 {
-                    var error = GLES20.glGetError();
-                    if (error == GLES20.GL_NO_ERROR)
+                    // see also Present().  a timeout here means that onDrawFrame
+                    // was never called, so the surface was probably destroyed.
+                    paused.compareAndSet(0, -1);
+                }
+                else
+                {
+                    var cond = wait ? new android.os.ConditionVariable() : null;
+                    surface.queueEvent(((java.lang.Runnable.Delegate) (() =>
                     {
                         try
                         {
@@ -97,18 +106,21 @@ namespace Microsoft.Xna.Framework.Graphics
                         {
                             exc = exc2;
                         }
-                        error = GLES20.glGetError();
-                    }
-                    if (error != GLES20.GL_NO_ERROR)
-                        exc = new Exception($"GL Error {error}");
-                    cond.open();
-                })).AsInterface());
-                cond.block();
+                        if (checkErrors)
+                        {
+                            var error = GLES20.glGetError();
+                            if (error != GLES20.GL_NO_ERROR)
+                                exc = new Exception($"GL Error {error}");
+                        }
+                        if (cond != null)
+                            cond.open();
+                    })).AsInterface());
+                    if (cond != null)
+                        cond.block();
+                }
             }
             if (exc != null)
-            {
                 throw new AggregateException(exc.Message, exc);
-            }
         }
 
         //
@@ -119,7 +131,19 @@ namespace Microsoft.Xna.Framework.Graphics
         {
             waitObject.close();
             surface.requestRender();
-            waitObject.block();
+
+            // GLSurfaceView runs queued events before checking if render
+            // was requested; but if the event queue is empty, it checks
+            // if render requested, then calls onDrawFrame().  thus the
+            // sequence of events is as follows:
+
+            // - Present() blocks waitObject and requests render
+            // - any events already queued by Send() are processed by
+            // GLSurfaceView, before it checks for a requested render.
+            // - Send() delays any new events until waitObject is opened.
+            // - OnDrawFrame() is called and opens waitObject, and when
+            // it returns to GLSurfaceView, the GL buffers are swapped.
+            // - with waitObject open, Send() queues new events.
         }
 
         //
@@ -132,6 +156,17 @@ namespace Microsoft.Xna.Framework.Graphics
             // if onSurfaceCreated is called while resuming from pause,
             // it means the GL context was lost
             paused.compareAndSet(1, -1);
+
+            // assign high priority to the rendering thread
+            java.lang.Thread.currentThread()
+                        .setPriority(java.lang.Thread.MAX_PRIORITY);
+
+            // set swap interval
+            if (swapInterval != 1)
+            {
+                var eglDisplay = EGL14.eglGetDisplay(EGL14.EGL_DEFAULT_DISPLAY);
+                EGL14.eglSwapInterval(eglDisplay, swapInterval);
+            }
         }
 
         [java.attr.RetainName]
@@ -188,7 +223,8 @@ namespace Microsoft.Xna.Framework.Graphics
 
         public static IntPtr Create(android.app.Activity activity, Action onChanged,
                                     int redSize, int greenSize, int blueSize,
-                                    int alphaSize, int depthSize, int stencilSize)
+                                    int alphaSize, int depthSize, int stencilSize,
+                                    int swapInterval, bool checkErrors)
         {
             for (;;)
             {
@@ -216,7 +252,8 @@ namespace Microsoft.Xna.Framework.Graphics
                         deviceId = deviceId,
                         renderer = new Renderer(activity, onChanged,
                                                 redSize, greenSize, blueSize,
-                                                alphaSize, depthSize, stencilSize),
+                                                alphaSize, depthSize, stencilSize,
+                                                swapInterval, checkErrors),
                         activity = new java.lang.@ref.WeakReference(activity),
                     });
 
@@ -290,7 +327,7 @@ namespace Microsoft.Xna.Framework.Graphics
             foreach (var renderer in GetRenderersForActivity(activity))
             {
                 renderer.surface.onPause();
-                renderer.paused.set(1);
+                renderer.paused.compareAndSet(0, 1);
             }
         }
 
@@ -304,9 +341,20 @@ namespace Microsoft.Xna.Framework.Graphics
             {
                 if (renderer.paused.get() != 0)
                 {
-                    renderer.waitObject.close();
+                    // we cannot use waitObject for resuming, because the surface
+                    // may have been destroyed between pause and resume, in which
+                    // case onDrawFrame would not get called.
+
+                    var cond = new android.os.ConditionVariable();
+                    renderer.surface.queueEvent(((java.lang.Runnable.Delegate) (
+                        () => cond.open() )).AsInterface());
+
                     renderer.surface.onResume();
-                    renderer.waitObject.block();
+                    if (! cond.block(2000))
+                    {
+                        // something is wrong if the queued event did not run
+                        return false;
+                    }
 
                     if (! renderer.paused.compareAndSet(1, 0))
                     {

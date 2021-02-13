@@ -90,7 +90,7 @@ namespace Microsoft.Xna.Framework.Graphics
             }
 
             int textureId = 0;
-            renderer.Send( () =>
+            renderer.Send(true, () =>
             {
                 int id = CreateTexture(renderer, GLES20.GL_TEXTURE_2D, format, levelCount);
                 if (id != 0)
@@ -138,7 +138,7 @@ namespace Microsoft.Xna.Framework.Graphics
         public static void FNA3D_AddDisposeTexture(IntPtr device, IntPtr texture)
         {
             var renderer = Renderer.Get(device);
-            renderer.Send( () =>
+            renderer.Send(true, () =>
             {
                 GLES20.glDeleteTextures(1, new int[] { (int) texture }, 0);
 
@@ -165,10 +165,13 @@ namespace Microsoft.Xna.Framework.Graphics
                 int[] intArray =>
                     java.nio.IntBuffer.wrap(intArray, dataOffset / 4, dataLength / 4),
 
+                Color[] colorArray =>
+                    bufferFromColorArray(colorArray, dataOffset, dataLength),
+
                 _ => throw new ArgumentException(dataObject?.GetType().ToString()),
             };
 
-            renderer.Send( () =>
+            renderer.Send(false, () =>
             {
                 GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, textureId);
 
@@ -200,6 +203,20 @@ namespace Microsoft.Xna.Framework.Graphics
 
                 }
             });
+
+            java.nio.Buffer bufferFromColorArray(Color[] array, int offset, int length)
+            {
+                // GameRunner constructor sets the marshal size of Color to -1,
+                // so we expect only negative or zero values here
+                if (offset > 0 || length > 0)
+                    throw new ArgumentException();
+                // convert Color[] array into an int[] array for the GL call
+                length = -length;
+                var intArray = new int[length];
+                for (int i = 0; i < length; i++)
+                    intArray[i] = (int) array[i - offset].PackedValue;
+                return java.nio.IntBuffer.wrap(intArray);
+            }
         }
 
         public static void FNA3D_SetTextureData2D(IntPtr device, IntPtr texture,
@@ -344,7 +361,7 @@ namespace Microsoft.Xna.Framework.Graphics
             int textureId = (int) texture;
             var renderer = Renderer.Get(device);
 
-            renderer.Send( () =>
+            renderer.Send(false, () =>
             {
                 var state = (State) renderer.UserData;
                 var config = state.TextureConfigs[textureId];

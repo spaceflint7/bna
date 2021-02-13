@@ -264,6 +264,29 @@ namespace Microsoft.Xna.Framework.Audio
         public static float DistanceScale { get; set; }
         public static float DopplerScale { get; set; }
         public static float SpeedOfSound { get; set; }
+
+        //
+        // ActivityPauseOrResume
+        //
+
+        public static void ActivityPauseOrResume(bool pausing)
+        {
+            try
+            {
+                instancesLock.@lock();
+                int num = instancesList.size();
+                for (int idx = 0; idx < num; idx++)
+                {
+                    var instRef = (java.lang.@ref.WeakReference) instancesList.get(idx);
+                    ((SoundEffectInstance) instRef.get())?.ActivityPauseOrResume(pausing);
+                }
+            }
+            finally
+            {
+                instancesLock.unlock();
+            }
+        }
+
     }
 
 
@@ -279,6 +302,7 @@ namespace Microsoft.Xna.Framework.Audio
         [java.attr.RetainType] private android.media.AudioTrack track;
         [java.attr.RetainType] private float pitch, pan, volume;
         [java.attr.RetainType] private bool isLooped;
+        [java.attr.RetainType] private bool wasPlayingBeforeActivityPause;
 
         //
         // Constructor (for SoundEffect.CreateInstance)
@@ -594,6 +618,27 @@ namespace Microsoft.Xna.Framework.Audio
 
         public void Apply3D(AudioListener listener, AudioEmitter emitter) { }
         public void Apply3D(AudioListener[] listeners, AudioEmitter emitter) { }
+
+        //
+        // ActivityPauseOrResume
+        //
+
+        public void ActivityPauseOrResume(bool pausing)
+        {
+            if (pausing)
+            {
+                if (State == SoundState.Playing)
+                {
+                    wasPlayingBeforeActivityPause = true;
+                    Pause();
+                }
+            }
+            else if (wasPlayingBeforeActivityPause)
+            {
+                wasPlayingBeforeActivityPause = false;
+                Resume();
+            }
+        }
 
     }
 

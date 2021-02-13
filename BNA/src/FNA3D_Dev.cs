@@ -27,20 +27,23 @@ namespace Microsoft.Xna.Framework.Graphics
                 default:                throw new ArgumentException("depthStencilFormat");
             }
 
+            int swapInterval = presentationParameters.presentationInterval switch
+            {
+                PresentInterval.Two       => 2,
+                PresentInterval.Immediate => 0,
+                // Default, One, or any other value:
+                _                         => 1
+            };
+
+            bool checkErrors = GameRunner.Singleton.CheckGlErrors();
+
             var device = Renderer.Create(GameRunner.Singleton.Activity,
                                          GameRunner.Singleton.OnSurfaceChanged,
-                                         8, 8, 8, 0, depthSize, stencilSize);
+                                         8, 8, 8, 0, depthSize, stencilSize,
+                                         swapInterval, checkErrors);
+
             FNA3D_ResetBackbuffer(device, ref presentationParameters);
             return device;
-
-            /*var renderer = Renderer.Get(device);
-            renderer.UserData = new State()
-            {
-                BackBufferWidth    = presentationParameters.backBufferWidth,
-                BackBufferHeight   = presentationParameters.backBufferHeight,
-                AdjustViewport     = // see also FNA3D_SetViewport
-                    (presentationParameters.displayOrientation == DisplayOrientation.Default)
-            };*/
         }
 
         //

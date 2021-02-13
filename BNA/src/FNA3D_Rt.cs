@@ -27,7 +27,7 @@ namespace Microsoft.Xna.Framework.Graphics
                 renderTargetsCopy[i] = renderTargets[i];
 
             var renderer = Renderer.Get(device);
-            renderer.Send( () =>
+            renderer.Send(false, () =>
             {
                 var state = (State) renderer.UserData;
                 if (state.TargetFramebuffer == 0)
@@ -99,7 +99,7 @@ namespace Microsoft.Xna.Framework.Graphics
                 throw new PlatformNotSupportedException();
 
             var renderer = Renderer.Get(device);
-            renderer.Send( () =>
+            renderer.Send(false, () =>
             {
                 GLES20.glBindFramebuffer(GLES30.GL_DRAW_FRAMEBUFFER, 0);
 
@@ -132,7 +132,7 @@ namespace Microsoft.Xna.Framework.Graphics
                 int texture = (int) renderTarget.texture;
 
                 var renderer = Renderer.Get(device);
-                renderer.Send( () =>
+                renderer.Send(false, () =>
                 {
                     int textureUnit = GLES20.GL_TEXTURE0 + renderer.TextureUnits - 1;
                     GLES20.glActiveTexture(textureUnit);
@@ -165,7 +165,7 @@ namespace Microsoft.Xna.Framework.Graphics
             int bufferId = 0;
 
             var renderer = Renderer.Get(device);
-            renderer.Send( () =>
+            renderer.Send(true, () =>
             {
                 var state = (State) renderer.UserData;
 
@@ -192,7 +192,7 @@ namespace Microsoft.Xna.Framework.Graphics
         public static void FNA3D_AddDisposeRenderbuffer(IntPtr device, IntPtr renderbuffer)
         {
             var renderer = Renderer.Get(device);
-            renderer.Send( () =>
+            renderer.Send(true, () =>
             {
                 GLES20.glDeleteRenderbuffers(1, new int[] { (int) renderbuffer }, 0);
             });
@@ -216,6 +216,8 @@ namespace Microsoft.Xna.Framework.Graphics
                                            int x, int y, int w, int h, int level,
                                            object dataObject, int dataOffset, int dataLength)
         {
+            int[] tempIntArray = null;
+
             java.nio.Buffer buffer = dataObject switch
             {
                 sbyte[] byteArray =>
@@ -224,10 +226,18 @@ namespace Microsoft.Xna.Framework.Graphics
                 int[] intArray =>
                     java.nio.IntBuffer.wrap(intArray, dataOffset / 4, dataLength / 4),
 
+                Color[] _ =>
+                    // GameRunner constructor sets the marshal size of Color to -1,
+                    // so we expect only negative or zero values here
+                    java.nio.IntBuffer.wrap(
+                        tempIntArray = new int[dataLength <= 0
+                                               ? (dataLength = -dataLength)
+                                               : throw new ArgumentException()]),
+
                 _ => throw new ArgumentException(dataObject?.GetType().ToString()),
             };
 
-            renderer.Send( () =>
+            renderer.Send(true, () =>
             {
                 var state = (State) renderer.UserData;
                 if (state.SourceFramebuffer == 0)
@@ -257,6 +267,16 @@ namespace Microsoft.Xna.Framework.Graphics
 
                 GLES20.glBindFramebuffer(GLES30.GL_READ_FRAMEBUFFER, 0);
             });
+
+            if (tempIntArray != null)
+            {
+                if (dataOffset > 0)
+                    throw new ArgumentException();
+                // convert int[] array from the GL call to a Color[] array
+                var colorArray = (Color[]) dataObject;
+                for (int i = 0; i < dataLength; i++)
+                    colorArray[i - dataOffset].PackedValue = (uint) tempIntArray[i];
+            }
         }
 
         //

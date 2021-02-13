@@ -24,6 +24,7 @@
 
     APK_TEMP_DIR = directory where APK processing occurs
                 e.g. $(OutputDir)/MyGame/Debug/Content
+                IMPORTANT:  this directory will be deleted and recreated!
 
     KEYSTORE_FILE = path to a keystore file used in APK signing
 
@@ -32,8 +33,6 @@
     ANDROID_MANIFEST = path to AndroidManifest.xml file
 
     BLUEBONNET_EXE = path to Bluebonnet.exe program file
-
-    BLUEBONNET_JAR = path to Baselib.jar file from Bluebonnet
 
     ANDROID_JAR = path to Android.jar file, for desired API level
                 e.g. $(ANDROID_HOME)/android-28/android.jar

@@ -40,7 +40,7 @@ namespace Microsoft.Xna.Framework.Graphics
                 }
             }
 
-            Renderer.Get(device).Send( () =>
+            Renderer.Get(device).Send(false, () =>
             {
                 GLES20.glViewport(v.x, v.y, v.w, v.h);
                 GLES20.glDepthRangef(v.minDepth, v.maxDepth);
@@ -54,7 +54,7 @@ namespace Microsoft.Xna.Framework.Graphics
         public static void FNA3D_SetScissorRect(IntPtr device, ref Rectangle scissor)
         {
             var s = scissor;
-            Renderer.Get(device).Send( () =>
+            Renderer.Get(device).Send(false, () =>
             {
                 GLES20.glScissor(s.X, s.Y, s.Width, s.Height);
             });
@@ -69,7 +69,7 @@ namespace Microsoft.Xna.Framework.Graphics
         {
             var clearColor = color;
             var renderer = Renderer.Get(device);
-            renderer.Send( () =>
+            renderer.Send(false, () =>
             {
                 var state = (State) renderer.UserData;
                 var WriteMask = state.WriteMask;
@@ -180,8 +180,7 @@ namespace Microsoft.Xna.Framework.Graphics
             {
                 throw new PlatformNotSupportedException();
             }
-            var renderer = Renderer.Get(device);
-            renderer.Present();
+            Renderer.Get(device).Present();
         }
 
         //
@@ -192,7 +191,7 @@ namespace Microsoft.Xna.Framework.Graphics
         {
             var input = blendState;
             var renderer = Renderer.Get(device);
-            Renderer.Get(device).Send( () =>
+            Renderer.Get(device).Send(false, () =>
             {
                 var state = (State) renderer.UserData;
 
@@ -323,7 +322,6 @@ namespace Microsoft.Xna.Framework.Graphics
         public static void FNA3D_SetDepthStencilState(IntPtr device,
                                                       ref FNA3D_DepthStencilState depthStencilState)
         {
-            // AndroidActivity.LogI(">>>>> SET DEPTH AND STENCIL STATE");
         }
 
         //
@@ -335,7 +333,7 @@ namespace Microsoft.Xna.Framework.Graphics
         {
             var input = rasterizerState;
             var renderer = Renderer.Get(device);
-            Renderer.Get(device).Send( () =>
+            Renderer.Get(device).Send(false, () =>
             {
                 var state = (State) renderer.UserData;
 
@@ -382,6 +380,30 @@ namespace Microsoft.Xna.Framework.Graphics
             });
         }
 
+        //
+        // FNA3D_GetBackbufferSize
+        //
+
+        public static void FNA3D_GetBackbufferSize(IntPtr device, out int w, out int h)
+        {
+            var bounds = GameRunner.Singleton.ClientBounds;
+            w = bounds.Width;
+            h = bounds.Height;
+        }
+
+        //
+        // FNA3D_GetBackbufferSurfaceFormat
+        //
+
+        public static SurfaceFormat FNA3D_GetBackbufferSurfaceFormat(IntPtr device)
+        {
+            return SurfaceFormat.Color;
+        }
+
+        //
+        // FNA3D_GetMaxMultiSampleCount
+        //
+
         public static int FNA3D_GetMaxMultiSampleCount(IntPtr device, SurfaceFormat format,
                                                        int preferredMultiSampleCount)
         {
@@ -426,7 +448,7 @@ namespace Microsoft.Xna.Framework.Graphics
             int indexOffset = startIndex * elementSize;
             primitiveCount = PrimitiveCount(primitiveType, primitiveCount);
 
-            Renderer.Get(device).Send( () =>
+            Renderer.Get(device).Send(false, () =>
             {
                 GLES20.glBindBuffer(GLES20.GL_ELEMENT_ARRAY_BUFFER, (int) indices);
                 GLES30.glDrawRangeElements(drawMode, minVertexIndex, maxVertexIndex,
@@ -464,7 +486,7 @@ namespace Microsoft.Xna.Framework.Graphics
             int drawMode = PrimitiveTypeToDrawMode[(int) primitiveType];
             primitiveCount = PrimitiveCount(primitiveType, primitiveCount);
 
-            Renderer.Get(device).Send( () =>
+            Renderer.Get(device).Send(false, () =>
             {
                 GLES20.glDrawArrays(drawMode, vertexStart, primitiveCount);
             });
